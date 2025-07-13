@@ -1,7 +1,6 @@
 import configparser
 import json
 import os
-import glob
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -24,7 +23,7 @@ config.read(config_path)
 SPOTIPY_CLIENT_ID = config.get('spotify', 'client_id', fallback=None)
 SPOTIPY_CLIENT_SECRET = config.get('spotify', 'client_secret', fallback=None)
 SPOTIPY_REDIRECT_URI = config.get('spotify', 'redirect_uri', fallback='http://localhost:3000/callback')
-SCOPE = 'playlist-modify-public playlist-modify-private playlist-read-private'
+SCOPE = 'playlist-modify-public playlist-modify-private playlist-read-private user-read-recently-played'
 
 # --- Caching ---
 CACHE_PATH = os.path.join(parent_dir, "data", "cache", ".spotify_cache")
@@ -51,45 +50,6 @@ def save_track_cache(cache):
 track_cache = load_track_cache()
 
 # --- Core Logic ---
-def find_most_recent_streaming_history():
-    """
-    Find the streaming history JSON file with the most recent endTime.
-    """
-    streaming_history_dir = os.path.join(parent_dir, 'data', 'StreamingHistoryJSONS')
-    
-    # Look for files matching the pattern StreamingHistory_music_X.json
-    pattern = os.path.join(streaming_history_dir, 'StreamingHistory_music_*.json')
-    json_files = glob.glob(pattern)
-    
-    if not json_files:
-        # Fallback to the old location if no files found in data/StreamingHistoryJSONS
-        fallback_file = os.path.join(parent_dir, 'StreamingHistory_music_1.json')
-        if os.path.exists(fallback_file):
-            return fallback_file
-        return None
-    
-    most_recent_file = None
-    most_recent_time = None
-    
-    for file_path in json_files:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                if data:  # Check if file has content
-                    # Get the first item to check endTime
-                    first_item = data[0]
-                    if 'endTime' in first_item:
-                        # Parse the endTime (format: "2023-12-31 23:59")
-                        end_time = datetime.strptime(first_item['endTime'], "%Y-%m-%d %H:%M")
-                        
-                        if most_recent_time is None or end_time > most_recent_time:
-                            most_recent_time = end_time
-                            most_recent_file = file_path
-        except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as e:
-            print(f"Error reading {file_path}: {e}")
-            continue
-    
-    return most_recent_file
 
 # --- Spotify Authentication ---
 def get_spotify_oauth():
@@ -176,31 +136,56 @@ def callback_get():
     try:
         oauth = get_spotify_oauth()
         token_info = oauth.get_access_token(code)
-        # Redirect to frontend after successful authentication
-        return f'<html><body><script>window.location.href = "/callback?code={code}";</script></body></html>'
+        # Redirect to frontend home page after successful authentication
+        return f'<html><body><script>window.location.href = "http://localhost:3000/";</script></body></html>'
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/history', methods=['GET'])
 def get_history():
-    """Get user's listening history"""
+    """Get user's listening history from Spotify Web API"""
     sp, token_info = get_spotify_client()
     if not token_info:
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
 
     try:
-        # Find the most recent streaming history file
-        most_recent_file = find_most_recent_streaming_history()
+        all_tracks = []
+        limit = 50  # Maximum allowed by Spotify API
         
-        if most_recent_file:
-            with open(most_recent_file, 'r', encoding='utf-8') as f:
-                all_history = json.load(f)
-                # Read from the end backwards (most recent first) and limit to 200 items
-                history = all_history[-200:] if len(all_history) > 200 else all_history
-                # Reverse to show most recent first
-                history.reverse()
-        else:
-            history = []
+        # First batch - get the most recent 50 tracks
+        recent_tracks = sp.current_user_recently_played(limit=limit)
+        
+        if recent_tracks and 'items' in recent_tracks:
+            all_tracks.extend(recent_tracks['items'])
+            
+            # If we got the full limit, fetch more tracks by going back in time
+            if len(recent_tracks['items']) == limit and recent_tracks['items']:
+                # Get the timestamp of the last track to use as "before" parameter
+                last_track = recent_tracks['items'][-1]
+                last_played_at = last_track['played_at']
+                
+                # Convert to Unix timestamp in milliseconds
+                from datetime import datetime
+                last_timestamp = int(datetime.fromisoformat(last_played_at.replace('Z', '+00:00')).timestamp() * 1000)
+                
+                # Second batch - get tracks played before the last timestamp
+                older_tracks = sp.current_user_recently_played(limit=limit, before=last_timestamp)
+                
+                if older_tracks and 'items' in older_tracks:
+                    all_tracks.extend(older_tracks['items'])
+        
+        # Convert Spotify API response to our expected format
+        history = []
+        for item in all_tracks:
+            track = item['track']
+            artists = ', '.join([artist['name'] for artist in track['artists']])
+            
+            history.append({
+                'artistName': artists,
+                'trackName': track['name'],
+                'endTime': item['played_at'],
+                'msPlayed': track['duration_ms']  # Use track duration as fallback
+            })
 
         return jsonify({'success': True, 'data': history})
     except Exception as e:
