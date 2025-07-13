@@ -165,6 +165,22 @@ def callback():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/callback', methods=['GET'])
+def callback_get():
+    """Handle OAuth callback from Spotify (GET request)"""
+    code = request.args.get('code')
+    
+    if not code:
+        return jsonify({'success': False, 'error': 'No authorization code provided'}), 400
+    
+    try:
+        oauth = get_spotify_oauth()
+        token_info = oauth.get_access_token(code)
+        # Redirect to frontend after successful authentication
+        return f'<html><body><script>window.location.href = "/callback?code={code}";</script></body></html>'
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/history', methods=['GET'])
 def get_history():
     """Get user's listening history"""

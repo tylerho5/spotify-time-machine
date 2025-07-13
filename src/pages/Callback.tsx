@@ -25,11 +25,17 @@ const Callback: React.FC = () => {
         },
         body: JSON.stringify({ code }),
       })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
         .then(data => {
           if (data.success) {
             navigate('/?auth=success');
           } else {
+            console.error('Auth failed:', data.error);
             navigate('/?error=auth_failed');
           }
         })
