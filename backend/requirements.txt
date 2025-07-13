@@ -1,0 +1,4 @@
+spotipy
+Flask
+pyopenssl
+flask-cors
