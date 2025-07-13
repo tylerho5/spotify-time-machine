@@ -110,7 +110,7 @@ const Home: React.FC = () => {
         <div className="glass rounded-spotify p-8 text-center max-w-md">
           <Music className="w-16 h-16 mx-auto mb-6 text-spotify-green" />
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            🎵 Spotify Time Machine
+            Spotify Time Machine
           </h1>
           <p className="text-gray-600 mb-6">
             Discover your Spotify listening history and easily add tracks to your playlists.
