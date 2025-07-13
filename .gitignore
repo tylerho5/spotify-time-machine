@@ -60,12 +60,11 @@ Thumbs.db
 data/cache/
 config.ini
 
+data/StreamingHistoryJSONS/
+
 # Python virtual environment
 backend/venv/
 backend/.env
-
-# Spotify data files (optional - you may want to commit these)
-data/StreamingHistoryJSONS/
 
 # Temporary files
 *.tmp
@@ -231,8 +230,3 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-
-.spotify_cache
-config.ini
-
-*.json
