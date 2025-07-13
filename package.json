@@ -7,7 +7,7 @@
     "dev": "vite --config config/frontend/vite.config.ts",
     "build": "tsc --project config/frontend/tsconfig.json && vite build --config config/frontend/vite.config.ts",
     "preview": "vite preview --config config/frontend/vite.config.ts",
-    "backend": "python backend/app.py"
+    "backend": "python3 backend/app.py"
   },
   "dependencies": {
     "react": "^18.2.0",

@@ -80,6 +80,7 @@ TypeScript + React for frontend. This was done mostly with Claude Sonnet 4 but I
 
 1. Start frontend and backend:
    ```bash
+   source backend/venv/bin/activate 
    npm run backend
 
    npm run dev
@@ -90,7 +91,7 @@ TypeScript + React for frontend. This was done mostly with Claude Sonnet 4 but I
 1. Start backend:
    ```bash
    cd backend
-   python app.py
+   python3 app.py
    ```
 
 2. Start frontend:
