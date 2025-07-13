@@ -136,7 +136,7 @@ const Home: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Music className="w-8 h-8 text-spotify-green" />
               <h1 className="text-3xl font-bold text-gray-900">
-                🎵 Spotify Time Machine
+                Spotify Time Machine
               </h1>
             </div>
             <div className="flex items-center space-x-4">
