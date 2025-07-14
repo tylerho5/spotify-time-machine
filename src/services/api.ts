@@ -8,9 +8,10 @@ const api = axios.create({
 
 export const spotifyApi = {
   // Get listening history
-  getHistory: async (): Promise<ApiResponse<SpotifyTrack[]>> => {
+  getHistory: async (before?: number): Promise<ApiResponse<SpotifyTrack[]>> => {
     try {
-      const response = await api.get('/history');
+      const params = before ? { before: before.toString() } : {};
+      const response = await api.get('/history', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching history:', error);

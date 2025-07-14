@@ -3,6 +3,7 @@ export interface SpotifyTrack {
   trackName: string;
   endTime: string;
   msPlayed?: number;
+  albumArtUrl?: string;
 }
 
 export interface SpotifyPlaylist {

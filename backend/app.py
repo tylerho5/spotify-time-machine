@@ -149,43 +149,45 @@ def get_history():
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
 
     try:
-        all_tracks = []
+        # Get optional 'before' parameter for pagination
+        before_param = request.args.get('before')
+        before_timestamp = None
+        
+        if before_param:
+            try:
+                before_timestamp = int(before_param)
+            except ValueError:
+                return jsonify({'success': False, 'error': 'Invalid before parameter'}), 400
+
         limit = 50  # Maximum allowed by Spotify API
         
-        # First batch - get the most recent 50 tracks
-        recent_tracks = sp.current_user_recently_played(limit=limit)
-        
-        if recent_tracks and 'items' in recent_tracks:
-            all_tracks.extend(recent_tracks['items'])
-            
-            # If we got the full limit, fetch more tracks by going back in time
-            if len(recent_tracks['items']) == limit and recent_tracks['items']:
-                # Get the timestamp of the last track to use as "before" parameter
-                last_track = recent_tracks['items'][-1]
-                last_played_at = last_track['played_at']
-                
-                # Convert to Unix timestamp in milliseconds
-                from datetime import datetime
-                last_timestamp = int(datetime.fromisoformat(last_played_at.replace('Z', '+00:00')).timestamp() * 1000)
-                
-                # Second batch - get tracks played before the last timestamp
-                older_tracks = sp.current_user_recently_played(limit=limit, before=last_timestamp)
-                
-                if older_tracks and 'items' in older_tracks:
-                    all_tracks.extend(older_tracks['items'])
+        # Fetch tracks based on whether we have a before parameter
+        if before_timestamp:
+            # Fetch tracks before the specified timestamp
+            recent_tracks = sp.current_user_recently_played(limit=limit, before=before_timestamp)
+        else:
+            # Fetch the most recent tracks
+            recent_tracks = sp.current_user_recently_played(limit=limit)
         
         # Convert Spotify API response to our expected format
         history = []
-        for item in all_tracks:
-            track = item['track']
-            artists = ', '.join([artist['name'] for artist in track['artists']])
-            
-            history.append({
-                'artistName': artists,
-                'trackName': track['name'],
-                'endTime': item['played_at'],
-                'msPlayed': track['duration_ms']  # Use track duration as fallback
-            })
+        if recent_tracks and 'items' in recent_tracks:
+            for item in recent_tracks['items']:
+                track = item['track']
+                artists = ', '.join([artist['name'] for artist in track['artists']])
+                
+                # Get album art URL
+                album_art_url = None
+                if track.get('album') and track['album'].get('images') and len(track['album']['images']) > 0:
+                    album_art_url = track['album']['images'][0]['url']
+                
+                history.append({
+                    'artistName': artists,
+                    'trackName': track['name'],
+                    'endTime': item['played_at'],
+                    'msPlayed': track['duration_ms'],  # Use track duration as fallback
+                    'albumArtUrl': album_art_url
+                })
 
         return jsonify({'success': True, 'data': history})
     except Exception as e:

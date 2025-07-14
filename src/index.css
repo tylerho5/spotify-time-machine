@@ -34,6 +34,15 @@ body {
   box-shadow: 0 6px 16px rgba(29, 185, 84, 0.4);
 }
 
+/* Spotify green color utilities */
+.bg-spotify-green {
+  background-color: #1db954;
+}
+
+.text-spotify-green {
+  color: #1db954;
+}
+
 /* Animations */
 @keyframes slide-in-right {
   from {
